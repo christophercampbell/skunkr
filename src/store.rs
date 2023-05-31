@@ -75,29 +75,6 @@ impl KeyValueStore for MdbxStore {
                 }
             }
             drop(results);
-
-/*
-            loop {
-                let row = cursor.next::<Vec<u8>, Vec<u8>>();
-                match row {
-                    Ok(Some((key_bytes, value_bytes))) => {
-                        let key = String::from_utf8_lossy(&key_bytes).into_owned();
-                        let value = String::from_utf8_lossy(&value_bytes).into_owned();
-                        results.send((key, value)).await.unwrap();
-                    }
-                    Ok(None) => {
-                        drop(results);
-                        break;
-                    }
-                    Err(x) => {
-                        println!("{}", x);
-                        drop(results);
-                        break;
-                    }
-                }
-            }
-
- */
         });
     }
 }
