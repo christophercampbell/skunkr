@@ -1,0 +1,45 @@
+syntax = "proto3";
+package skunkr;
+
+service Data {
+  // Get a value by key
+  rpc Get(GetRequest) returns (GetResponse) {}
+
+  // Set a value for a given key
+  rpc Set(SetRequest) returns (SetResponse) {}
+
+  // Scan the keys and values in the store
+  rpc Scan(ScanRequest) returns (stream ScanResponse) {}
+}
+
+// Request message for the Get RPC
+message GetRequest {
+  string key = 1;
+}
+
+// Response message for the Get RPC
+message GetResponse {
+  string value = 1;
+}
+
+// Request message for the Set RPC
+message SetRequest {
+  string key = 1;
+  string value = 2;
+}
+
+// Response message for the Set RPC
+message SetResponse {
+  bool success = 1;
+}
+
+// Request message for the Scan RPC
+message ScanRequest {
+  string from = 1;
+}
+
+// Response message for the Scan RPC
+message ScanResponse {
+  string key = 2;
+  string value = 3;
+}
