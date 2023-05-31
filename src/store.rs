@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 use libmdbx::*;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot::Receiver;
@@ -9,6 +10,8 @@ pub trait KeyValueStore {
     fn set(&self, key: &str, value: &str) -> bool;
     fn scan(&self, from: Receiver<Option<String>>, results: Sender<(String, String)>);
 }
+
+pub const SEND_TIMEOUT: Duration = Duration::new(3, 0);
 
 #[derive(Debug)]
 pub struct MdbxStore {
@@ -69,7 +72,11 @@ impl KeyValueStore for MdbxStore {
                     Ok((key_bytes, value_bytes)) => {
                         let key = String::from_utf8_lossy(&key_bytes).into_owned();
                         let value = String::from_utf8_lossy(&value_bytes).into_owned();
-                        results.send((key, value)).await.unwrap();
+                        // results blocks when full, if client does not read, it will timeout
+                        if let Err(e) = results.send_timeout((key, value), SEND_TIMEOUT).await {
+                            println!("send error: #{:?}", e);
+                            break;
+                        }
                     }
                     _ => break
                 }
