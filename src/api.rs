@@ -1,3 +1,4 @@
+// include the generated code for IDE convenience
 include!(concat!(env!("OUT_DIR"), "/skunkr.rs"));
 
 use tonic_reflection::server::{Error, ServerReflection, ServerReflectionServer};
