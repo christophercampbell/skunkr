@@ -74,7 +74,7 @@ impl KeyValueStore for MdbxStore {
                         let value = String::from_utf8_lossy(&value_bytes).into_owned();
                         // results blocks when full, if client does not read, it will timeout
                         if let Err(e) = results.send_timeout((key, value), SEND_TIMEOUT).await {
-                            println!("send error: #{:?}", e);
+                            log::error!("send error: #{:?}", e);
                             break;
                         }
                     }
