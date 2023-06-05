@@ -56,29 +56,32 @@ impl Data for Service {
             s => Some(s.to_string())
         };
 
-        // inbound data channel ( db -> service )
-        let (source, mut receiver) = mpsc::channel(10);
+        // command channel
+        let (start, accept) = oneshot::channel();
+        start.send(from).expect("failed to send filter command");
 
-        let (filter_sender, filter_receiver) = oneshot::channel();
-        filter_sender.send(from).expect("failed to send filter command");
+        // source data channel
+        let (source, mut buffer) = mpsc::channel(10);
 
         // start the scanner
-        let _ = &self.store.scan(filter_receiver, source);
+        let _ = &self.store.scan(accept, source);
 
-        // outbound channel ( service -> caller )
-        let (dispatcher, sink) = mpsc::unbounded_channel();
+        // outbound channel
+        let (outbound, consumer) = mpsc::unbounded_channel();
 
         // receive, transform, and relay the rows
         tokio::spawn(async move {
             loop {
-                let _ = match receiver.recv().await {
-                    Some(kv) => dispatcher.send(Ok(ScanResponse { key: kv.0, value: kv.1 })),
+                // buffer blocks when consumer falls behind, giving
+                // back pressure to data source, avoiding too much memory pressure
+                let _ = match buffer.recv().await {
+                    Some(kv) => outbound.send(Ok(ScanResponse { key: kv.0, value: kv.1 })),
                     None => break
                 };
             }
         });
 
-        let stream = UnboundedReceiverStream::new(sink);
+        let stream = UnboundedReceiverStream::new(consumer);
         Ok(Response::new(Box::pin(stream) as Self::ScanStream))
     }
 }

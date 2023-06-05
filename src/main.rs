@@ -1,32 +1,30 @@
-mod service;
 mod api;
+mod service;
 mod store;
 
-use clap::ArgGroup;
-use clap::Parser;
 use chrono::Local;
+use clap::{ArgGroup, Parser};
 use env_logger;
 use log;
-use std::process;
 use std::io::Write;
+use std::process;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     init_logging();
 
     let args = Args::parse();
 
     let port = args.port;
-    let address = format!("[::1]:{}", port).parse().unwrap();
-
+    let address = format!("0.0.0.0:{}", port).parse().unwrap();
     let mut data = args.data;
+
     match (args.leveldb, args.mdbx) {
-        (true,false) => {
+        (true, false) => {
             // data = format!("{}/leveldb", data)
             log::error!("leveldb not implemented");
             process::exit(1);
-        },
+        }
         _ => data = format!("{}/mdbx", data)
     }
 
@@ -44,9 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 #[clap(group(
-    ArgGroup::new("storage")
-        .required(true)
-        .args(&["mdbx", "leveldb"]),
+ArgGroup::new("storage")
+.required(true)
+.args(& ["mdbx", "leveldb"]),
 ))]
 struct Args {
     /// Path to data
@@ -61,7 +59,7 @@ struct Args {
     mdbx: bool,
 
     #[arg(long)]
-    leveldb: bool
+    leveldb: bool,
 }
 
 /// Use env_logger env variables, as in RUST_LOG=info, or for module level RUST_LOG=error,skunkr::service=warn
