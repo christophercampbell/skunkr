@@ -17,19 +17,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Cache protobuf
-      uses: actions/cache@v2
-      with:
-        key: pb-linux-3.19.4
-        path: ~/pb
-      env:
-        cache-name: pb
-
-    - name: Install protobuf
-      run: ci/install-protobuf.sh
-      shell: bash
-      env:
-        PROTOBUF_VERSION: 3.19.4
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
 
     - name: Protoc check
       run: protoc --version
