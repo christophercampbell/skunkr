@@ -1,6 +1,6 @@
 
 ```shell
-cargo run
+cargo run -- --data /path/to/data --port <port> --mdbx
 ```
 
 ```shell
