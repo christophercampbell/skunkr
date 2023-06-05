@@ -2,8 +2,19 @@ mod service;
 mod api;
 mod store;
 
+use clap::ArgGroup;
+use clap::Parser;
+use chrono::Local;
+use env_logger;
+use log;
+use std::process;
+use std::io::Write;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    init_logging();
+
     let args = Args::parse();
 
     let port = args.port;
@@ -13,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match (args.leveldb, args.mdbx) {
         (true,false) => {
             // data = format!("{}/leveldb", data)
-            println!("leveldb not implemented");
+            log::error!("leveldb not implemented");
             process::exit(1);
         },
         _ => data = format!("{}/mdbx", data)
@@ -29,10 +40,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-use std::process;
-use clap::Parser;
-use clap::ArgGroup;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -55,4 +62,30 @@ struct Args {
 
     #[arg(long)]
     leveldb: bool
+}
+
+/// Use env_logger env variables, as in RUST_LOG=info, or for module level RUST_LOG=error,skunkr::service=warn
+fn init_logging() {
+    env_logger::Builder::from_default_env()
+        .format(|buf, record| {
+            let level = record.level();
+            let color = match level {
+                log::Level::Error => "\x1b[31m",   // Red
+                log::Level::Warn => "\x1b[33m",    // Yellow
+                log::Level::Info => "\x1b[32m",    // Green
+                log::Level::Debug => "\x1b[34m",   // Blue
+                log::Level::Trace => "\x1b[35m",   // Magenta
+            };
+            let reset = "\x1b[0m";
+            writeln!(
+                buf,
+                "{} {}[{}]{} {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                color,
+                level,
+                reset,
+                record.args()
+            )
+        })
+        .init();
 }
