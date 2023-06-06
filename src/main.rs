@@ -3,32 +3,32 @@ mod service;
 mod store;
 
 use chrono::Local;
-use clap::{ArgGroup, Parser};
 use env_logger;
 use log;
 use std::io::Write;
 use std::process;
+use structopt::StructOpt;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
 
-    let args = Args::parse();
+    let args = Args::from_args();
 
     let port = args.port;
     let address = format!("0.0.0.0:{}", port).parse().unwrap();
     let mut data = args.data;
 
-    match (args.leveldb, args.mdbx) {
-        (true, false) => {
-            // data = format!("{}/leveldb", data)
-            log::error!("leveldb not implemented");
-            process::exit(1);
-        }
-        _ => data = format!("{}/mdbx", data)
+    if args.leveldb {
+        // data = format!("{}/leveldb", data)
+        log::error!("leveldb not implemented");
+        process::exit(1);
+    }
+    if args.mdbx || !args.mdbx { // default is mdbx
+        data = format!("{}/mdbx", data);
     }
 
-    let service = service::Service::with_mdbx(&data);
+    let service = service::Service::start(&data);
 
     tonic::transport::Server::builder()
         .add_service(api::data_server::DataServer::new(service))
@@ -39,26 +39,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-#[clap(group(
-ArgGroup::new("storage")
-.required(true)
-.args(& ["mdbx", "leveldb"]),
-))]
-struct Args {
-    /// Path to data
-    #[arg(short, long)]
+#[derive(StructOpt, Debug)]
+#[structopt(name = "Args", about = "Program arguments")]
+pub struct Args {
+    #[structopt(short = "d", long = "data", required = true)]
     data: String,
 
-    /// Port to listen on
-    #[arg(short, long, default_value_t = 8800)]
+    #[structopt(short = "p", long = "port", default_value = "7070")]
     port: u16,
 
-    #[arg(long)]
+    #[structopt(long = "mdbx", conflicts_with = "leveldb")]
     mdbx: bool,
 
-    #[arg(long)]
+    #[structopt(long = "leveldb", conflicts_with = "mdbx")]
     leveldb: bool,
 }
 
@@ -84,6 +77,5 @@ fn init_logging() {
                 reset,
                 record.args()
             )
-        })
-        .init();
+        }).init();
 }

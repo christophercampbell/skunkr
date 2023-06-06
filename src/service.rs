@@ -15,7 +15,7 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn with_mdbx(path: &str) -> Self {
+    pub fn start(path: &str) -> Self {
         Service {
             store: Box::new(MdbxStore::new(path))
         }
