@@ -15,7 +15,7 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn start(path: &str) -> Self {
+    pub fn new(path: &str) -> Self {
         Service {
             store: Box::new(MdbxStore::new(path))
         }
@@ -47,7 +47,7 @@ impl Data for Service {
 
     type ScanStream = Pin<Box<dyn Stream<Item = Result<ScanResponse, Status>> + Send>>;
 
-    async fn scan(&self, request: Request<ScanRequest>, ) -> Result<Response<Self::ScanStream>, Status> {
+    async fn scan(&self, request: Request<ScanRequest>) -> Result<Response<Self::ScanStream>, Status> {
 
         let req = request.into_inner();
 
