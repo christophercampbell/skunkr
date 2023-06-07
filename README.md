@@ -10,38 +10,61 @@ skunkr.data.Data.Scan
 skunkr.data.Data.Set
 ```
 
+Keys and data are base64 encoded byte arrays.
+
 ```shell
-~ » grpcurl -plaintext -d '{"key": "foobar", "value": "dingbat"}' localhost:7070 skunkr.Data.Set
+echo foobar | base64
+Zm9vYmFyCg==
+
+echo dingbat | base64
+ZGluZ2JhdAo=
+```
+
+```shell
+~ » grpcurl -plaintext -d '{"key": "Zm9vYmFyCg==", "value": "ZGluZ2JhdAo="}' localhost:7070 skunkr.Data.Set
 {
   "success": true
 }
 ------------------------------------------------------------------------------------------------------------------------------
-~ » grpcurl -plaintext -d '{"key": "foobar"}' localhost:7070 skunkr.Data.Get
+~ » grpcurl -plaintext -d '{"key": "Zm9vYmFyCg=="}' localhost:7070 skunkr.Data.Get
 {
-  "value": "dingbat"
+  "value": "ZGluZ2JhdAo="
 }
 ```
 
 ```shell
-~ » grpcurl -plaintext -d '{"key": "mickey", "value": "mouse"}' localhost:7070 skunkr.Data.Set
+echo mickey | base64
+bWlja2V5Cg==
+
+echo mouse | base64
+bW91c2UK
+```
+
+```shell
+~ » grpcurl -plaintext -d '{"key": "bWlja2V5Cg==", "value": "bW91c2UK"}' localhost:7070 skunkr.Data.Set
 {
   "success": true
 }
 ------------------------------------------------------------------------------------------------------------------------------
-~ » grpcurl -plaintext -d '{"key": "mickey"}' localhost:7070 skunkr.Data.Get
+~ » grpcurl -plaintext -d '{"key": "bWlja2V5Cg=="}' localhost:7070 skunkr.Data.Get
 {
-  "value": "mouse"
+  "value": "bW91c2UK"
 }
 ```
 
+```
+echo foo | base64
+Zm9vCg==
+```
+
 ```shell
-~ » grpcurl -plaintext -d '{"from": "foo"}' localhost:7070 skunkr.Data.Scan
+~ » grpcurl -plaintext -d '{"from": "Zm9vCg=="}' localhost:7070 skunkr.Data.Scan
 {
-  "key": "foobar",
-  "value": "dingbat"
+  "key": "Zm9vYmFyCg==",
+  "value": "ZGluZ2JhdAo="
 }
 {
-  "key": "mickey",
-  "value": "mouse"
+  "key": "bWlja2V5Cg==",
+  "value": "bW91c2UK"
 }
 ```

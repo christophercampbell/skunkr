@@ -6,9 +6,9 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::oneshot::Receiver;
 
 pub trait KeyValueStore {
-    fn get(&self, key: &str) -> Option<String>;
-    fn set(&self, key: &str, value: &str) -> bool;
-    fn scan(&self, from: Receiver<Option<String>>, results: Sender<(String, String)>);
+    fn get(&self, key: Vec<u8>) -> Option<Vec<u8>>;
+    fn set(&self, key: Vec<u8>, value: Vec<u8>) -> bool;
+    fn scan(&self, from: Receiver<Option<Vec<u8>>>, results: Sender<(Vec<u8>, Vec<u8>)>);
 }
 
 pub const SEND_TIMEOUT: Duration = Duration::new(3, 0);
@@ -28,22 +28,21 @@ impl MdbxStore {
 }
 
 impl KeyValueStore for MdbxStore {
-    fn get(&self, key: &str) -> Option<String> {
+    fn get(&self, key: Vec<u8>) -> Option<Vec<u8>> {
         let tx = self.db.begin_ro_txn().unwrap();
         let table = tx.open_table(None).unwrap();
-        match tx.get::<Vec<u8>>(&table, key.as_bytes()).unwrap() {
+        match tx.get::<Vec<u8>>(&table, key.as_ref()).unwrap() {
             Some(value_bytes) => {
-                let value = String::from_utf8_lossy(value_bytes.as_slice());
-                Some(value.into_owned())
+                Some(value_bytes)
             }
             _ => None,
         }
     }
 
-    fn set(&self, key: &str, value: &str) -> bool {
+    fn set(&self, key: Vec<u8>, value: Vec<u8>) -> bool {
         let tx = self.db.begin_rw_txn().unwrap();
         let table = tx.open_table(None).unwrap();
-        match tx.put(&table, key.as_bytes(), value.as_bytes(), WriteFlags::UPSERT) {
+        match tx.put(&table, key, value, WriteFlags::UPSERT) {
             Ok(_) => {
                 tx.commit().unwrap();
                 true
@@ -52,7 +51,7 @@ impl KeyValueStore for MdbxStore {
         }
     }
 
-    fn scan(&self, mut filter: Receiver<Option<String>>, results: Sender<(String, String)>) {
+    fn scan(&self, mut filter: Receiver<Option<Vec<u8>>>, results: Sender<(Vec<u8>, Vec<u8>)>) {
         let database = self.db.clone();
 
         tokio::spawn(async move {
@@ -63,17 +62,15 @@ impl KeyValueStore for MdbxStore {
             let from = filter.try_recv().unwrap();
 
             let mut iterator = match from.is_some() {
-                true => cursor.iter_from::<Vec<u8>, Vec<u8>>(from.unwrap().as_bytes()),
+                true => cursor.iter_from::<Vec<u8>, Vec<u8>>(from.unwrap().as_slice()),
                 false => cursor.iter_start::<Vec<u8>, Vec<u8>>()
             };
 
             while let Some(row) = iterator.next() {
                 match row {
                     Ok((key_bytes, value_bytes)) => {
-                        let key = String::from_utf8_lossy(&key_bytes).into_owned();
-                        let value = String::from_utf8_lossy(&value_bytes).into_owned();
                         // results blocks when full, if client does not read, it will timeout
-                        if let Err(e) = results.send_timeout((key, value), SEND_TIMEOUT).await {
+                        if let Err(e) = results.send_timeout((key_bytes, value_bytes), SEND_TIMEOUT).await {
                             log::error!("send error: #{:?}", e);
                             break;
                         }

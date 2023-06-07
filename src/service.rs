@@ -26,20 +26,19 @@ impl Service {
 impl Data for Service {
     async fn get(&self, request: Request<GetRequest>) -> Result<Response<GetResponse>, Status> {
         let r = request.into_inner();
-        match &self.store.get(r.key.as_str()) {
+        match &self.store.get(r.key) {
             Some(value) => Ok(Response::new(GetResponse {
-                value: value.to_string()
+                value: value.to_vec()
             })),
             None => Ok(Response::new(GetResponse{ // TODO: error responses
-                value: String::from("")
+                value: Vec::new()
             })),
         }
-
     }
 
     async fn set(&self, request: Request<SetRequest>) -> Result<Response<SetResponse>, Status> {
         let r = request.into_inner();
-        let inserted = &self.store.set(r.key.as_str(), r.value.as_str());
+        let inserted = &self.store.set(r.key, r.value);
         Ok(Response::new(SetResponse {
             success: *inserted
         }))
@@ -51,9 +50,9 @@ impl Data for Service {
 
         let req = request.into_inner();
 
-        let from = match req.from.as_str() {
-            "" => None,
-            s => Some(s.to_string())
+        let from = match req.from.len() {
+            0 => None,
+            _ => Some(req.from)
         };
 
         // command channel
