@@ -6,34 +6,30 @@ use chrono::Local;
 use env_logger;
 use log;
 use std::io::Write;
+use std::net::SocketAddr;
 use std::process;
 use structopt::StructOpt;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
     init_logging();
 
     let args = Args::from_args();
 
-    let port = args.port;
-    let address = format!("0.0.0.0:{}", port).parse().unwrap();
-    let mut data = args.data;
-
-    if args.leveldb {
-        // data = format!("{}/leveldb", data)
-        log::error!("leveldb not implemented");
-        process::exit(1);
-    }
-    if args.mdbx || !args.mdbx { // default is mdbx
-        data = format!("{}/mdbx", data);
-    }
-
-    let service = service::Service::start(&data);
+    let data = match args.data_path() {
+        Ok(path) => path,
+        Err(msg) => {
+            log::error!("{}", msg);
+            process::exit(1);
+        }
+    };
 
     tonic::transport::Server::builder()
-        .add_service(api::data_server::DataServer::new(service))
-        .add_service(api::create_reflection_server()?)
-        .serve(address)
+        .add_service(
+            api::data_server::DataServer::new(service::Service::new(&data))
+        ).add_service(api::create_reflection_server()?)
+        .serve(args.bind_addr())
         .await?;
 
     Ok(())
@@ -53,6 +49,25 @@ pub struct Args {
 
     #[structopt(long = "leveldb", conflicts_with = "mdbx")]
     leveldb: bool,
+}
+
+impl Args {
+    fn bind_addr(&self) -> SocketAddr {
+        let port = &self.port;
+        return format!("0.0.0.0:{}", port).parse().unwrap();
+    }
+    fn data_path(&self) -> Result<String,String> {
+        match self.data_dir_name() {
+            "leveldb" => Err(String::from("leveldb not implemented")),
+            x => Ok(format!("{}/{}", self.data, x))
+        }
+    }
+    fn data_dir_name(&self) -> &'static str {
+        match (self.mdbx, self.leveldb) {
+            (false,true) => "leveldb",
+            _ => "mdbx"
+        }
+    }
 }
 
 /// Use env_logger env variables, as in RUST_LOG=info, or for module level RUST_LOG=error,skunkr::service=warn
