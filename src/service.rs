@@ -4,11 +4,10 @@ use tonic::{Request, Response, Status};
 use tokio::sync::{mpsc, oneshot};
 use tonic::codegen::futures_core::Stream;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use crate::store::{KeyValueStore, MdbxStore};
 
-use super::api::{GetRequest,GetResponse,SetRequest,SetResponse,ScanRequest,ScanResponse};
+use super::api::{GetRequest, GetResponse, SetRequest, SetResponse, ScanRequest, ScanResponse};
 use super::api::data_server::Data;
-
-use super::store::*;
 
 pub struct Service {
     pub store: Box<dyn KeyValueStore + Send + Sync>
