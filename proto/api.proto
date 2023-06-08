@@ -15,6 +15,7 @@ service Data {
 // Request message for the Get RPC
 message GetRequest {
   bytes key = 1;
+  optional string table = 2;
 }
 
 // Response message for the Get RPC
@@ -26,6 +27,7 @@ message GetResponse {
 message SetRequest {
   bytes key = 1;
   bytes value = 2;
+  optional string table = 3;
 }
 
 // Response message for the Set RPC
@@ -37,6 +39,7 @@ message SetResponse {
 message ScanRequest {
   bytes from = 1;
   int32 max = 2;
+  optional string table = 3;
 }
 
 // Response message for the Scan RPC

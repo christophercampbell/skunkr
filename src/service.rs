@@ -25,7 +25,7 @@ impl Service {
 impl Data for Service {
     async fn get(&self, request: Request<GetRequest>) -> Result<Response<GetResponse>, Status> {
         let r = request.into_inner();
-        match &self.store.get(r.key) {
+        match &self.store.get(r.table, r.key) {
             Some(value) => Ok(Response::new(GetResponse {
                 value: value.to_vec()
             })),
@@ -37,7 +37,7 @@ impl Data for Service {
 
     async fn set(&self, request: Request<SetRequest>) -> Result<Response<SetResponse>, Status> {
         let r = request.into_inner();
-        let inserted = &self.store.set(r.key, r.value);
+        let inserted = &self.store.set(r.table, r.key, r.value);
         Ok(Response::new(SetResponse {
             success: *inserted
         }))
@@ -56,7 +56,7 @@ impl Data for Service {
 
         // command channel
         let (start, accept) = oneshot::channel();
-        start.send(from).expect("failed to send filter command");
+        start.send((req.table, from)).expect("failed to send filter command");
 
         // source data channel
         let (source, mut buffer) = mpsc::channel(10);

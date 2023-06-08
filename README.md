@@ -1,3 +1,4 @@
+Simple KV store with an iterating scan interface, IO bound to limits of storage. No (yet) authentication or encryption. 
 
 ```shell
 cargo run -- --data /path/to/data --port <port> --mdbx
