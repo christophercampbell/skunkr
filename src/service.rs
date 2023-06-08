@@ -4,11 +4,10 @@ use tonic::{Request, Response, Status};
 use tokio::sync::{mpsc, oneshot};
 use tonic::codegen::futures_core::Stream;
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use crate::store::{KeyValueStore, MdbxStore};
 
-use super::api::{GetRequest,GetResponse,SetRequest,SetResponse,ScanRequest,ScanResponse};
+use super::api::{GetRequest, GetResponse, SetRequest, SetResponse, ScanRequest, ScanResponse};
 use super::api::data_server::Data;
-
-use super::store::*;
 
 pub struct Service {
     pub store: Box<dyn KeyValueStore + Send + Sync>
@@ -26,20 +25,19 @@ impl Service {
 impl Data for Service {
     async fn get(&self, request: Request<GetRequest>) -> Result<Response<GetResponse>, Status> {
         let r = request.into_inner();
-        match &self.store.get(r.key.as_str()) {
+        match &self.store.get(r.table, r.key) {
             Some(value) => Ok(Response::new(GetResponse {
-                value: value.to_string()
+                value: value.to_vec()
             })),
             None => Ok(Response::new(GetResponse{ // TODO: error responses
-                value: String::from("")
+                value: Vec::new()
             })),
         }
-
     }
 
     async fn set(&self, request: Request<SetRequest>) -> Result<Response<SetResponse>, Status> {
         let r = request.into_inner();
-        let inserted = &self.store.set(r.key.as_str(), r.value.as_str());
+        let inserted = &self.store.set(r.table, r.key, r.value);
         Ok(Response::new(SetResponse {
             success: *inserted
         }))
@@ -51,14 +49,14 @@ impl Data for Service {
 
         let req = request.into_inner();
 
-        let from = match req.from.as_str() {
-            "" => None,
-            s => Some(s.to_string())
+        let from = match req.from.len() {
+            0 => None,
+            _ => Some(req.from)
         };
 
         // command channel
         let (start, accept) = oneshot::channel();
-        start.send(from).expect("failed to send filter command");
+        start.send((req.table, from)).expect("failed to send filter command");
 
         // source data channel
         let (source, mut buffer) = mpsc::channel(10);
